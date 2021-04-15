@@ -6,7 +6,7 @@
 # readable by the SNMP user or group, this script may be called directly.
 # If not, sudo or something similar is required.
 
-# This script produces the following statistics over the past stats_interval minutes:
+# This script produces the following statistics over the past db_stats_interval minutes:
 #   - Average pendulum skew in uS
 #   - Maximum pendulum skew in uS
 #   - Minimum pendulum skew in uS
@@ -16,6 +16,8 @@
 #   - Percentage of fast beats faster than "Fair" tolerance but slower than "Poor" tolerance
 #   - Percentage of fast beats faster than "Poor" tolerance 
 #   - Average daily drift in s/day
+#   - 95th percentile max
+#   - 95th percentile min
 
 import sqlite3
 from dbstore import dbopen, dbclose
@@ -25,7 +27,7 @@ import config as cfg
 dbx = dbopen()      # Open the database
 dbx.row_factory = lambda cursor, row: row[0]        # Produce a list, not a list of tuples
 cur = dbx.cursor()
-sql = "SELECT skew FROM beats WHERE beattype=1 AND timestamp >= Datetime('now', '-{} minutes', 'localtime');".format(cfg.stats_interval)
+sql = "SELECT skew FROM beats WHERE beattype=1 AND timestamp >= Datetime('now', '-{} minutes', 'localtime') ORDER BY skew;".format(cfg.db_stats_interval)
 cur.execute(sql)
 rows = cur.fetchall()
 
@@ -39,6 +41,8 @@ print(round(100*len([element for element in rows if abs(cfg.p_offset-element) <=
 print(round(100*len([element for element in rows if cfg.p_offset+cfg.p_tolerance1 < element <= cfg.p_offset+cfg.p_tolerance2])/len(rows),1))            # Yellow+ percent
 print(round(100*len([element for element in rows if element > cfg.p_offset+cfg.p_tolerance2])/len(rows),1))       # Red+ percent
 print(round(-avgskew*86400/cfg.p_period,1))                 # Average daily skew over the past 5 minutes
+print(rows[int(len(rows)*0.95)])                    # 95th percentile max
+print(rows[int(len(rows)*0.05)])                    # 95th percentile min
 
 dbclose()
 

@@ -84,6 +84,41 @@ where cmd/args are:
                 if len(args) == 1: switchdebug('Environmental sensors', 'env')
                 else: switchdebug('Environmental sensors', 'env', args[1])
 
+    def do_mqtt(self, *args):
+        '''set/display MQTT broker parameters
+Usage: mqtt [cmd] [args]
+where cmd/args are:
+    (nothing)           display MQTT module status
+    debug               display/set MQTT debug output status
+        (none)          display MQTT debug output status
+        [0-3]           set MQTT debug output level
+    telemetry           display/set MQTT telemetry settings
+        (none)          display MQTT telemetry settings
+        [on|off]        turn MQTT telemetry on/off
+        arr[ive]        display telemetry setting for pendulum arrival
+            [on|off]    set pendulum arrival telemetry on/off
+        dep[art]        display telemetry setting for pendulum departure
+            [on|off]    set pendulum departure telemetry on/off
+        int[erval]      display MQTT telemetry interval
+            [n]         set MQTT telemetry interval
+'''
+        if len(args) == 0:
+            if cfg.mqtt_engine:
+                uiq.put(('MQTT engine is on'))
+            else:
+                uiq.pub(('MQTT engine is off'))
+        else:
+            cmd = args[0].lower()
+            if cmd == 'debug':
+                if len(args) == 1: switchdebug('MQTT', 'mqtt')
+                else: switchdebug('MQTT', 'mqtt', args[1])
+            elif cmd == 'telemetry':
+                if len(args) == 1:
+                    if cfg.mqtt_telemetry:
+                        uiq.put(('Telemetry is on: interval {}, arrivals {}, departures {}'.format(cfg.mqtt_telemetry_interval, mqtt_p_arrive, mqtt_p_depart)))
+                    else:
+                        uiq.put(('Telemetry is off'))   # FIXME finish writing this stuff later  :)
+
     def do_pendulum(self, *args):
         '''set/display pendulum parameters
 where cmd/args are:
@@ -126,12 +161,19 @@ where cmd/args are:
         '''set/display the (physical) clock time
 Usage: clocktime            Display the current physical clock time
             ([HH:]MM|now)   Set the clock time on the next beat
+            (+|-)s          Set the clock time to the current time plus or minus s seconds
 '''
         if len(args) == 0:
             uiq.put(('Clock time is {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
             return
         elif args[0].lower() == 'now':
             globs.clocktime = datetime.now()
+        elif args[0][0] == '+' or args[0][0] == '-':
+            try:
+                globs.clocktime = datetime.now() + timedelta(seconds=float(args[0]))
+            except ValueError:
+                uiq.put(('ERROR: +/- time value must be some number of seconds','ERR'))
+                return
         else:
             try:
                 newclocktime = re.compile(r'((\d{1,2})?\D?(\d{2}))').search(args[0]).groups()
@@ -155,6 +197,7 @@ Usage: clocktime            Display the current physical clock time
                 uiq.put(('ERROR: Minute must be 0-59','ERR'))
                 return
             globs.clocktime = globs.clocktime.replace(hour=newclockhour, minute=newclockmin, second=0, microsecond=0)
+        # Need to know when this ran, to compute a partial beat next time the pendulum arrives
         globs.newclocktime = datetime.now()
 
     def do_debug(self, *args):

@@ -13,6 +13,8 @@ from ui import uiq, error
 from commander import Commander,Command
 import dbstore
 import environment
+import mqttclient
+import lightsense
 
 def checkconfig():
     '''check the config file for sanity'''
@@ -131,6 +133,14 @@ if __name__ == '__main__':
             envT = threading.Thread(name='env', target=environment.envD, args=(pig,))
             envT.daemon = True
             envT.start()
+        if cfg.mqtt_engine:
+            mqttT = threading.Thread(name='mqtt', target=mqttclient.mqttD)
+            mqttT.daemon = True
+            mqttT.start()
+        if cfg.light_engine:
+            lightsenseT = threading.Thread(name='lightsense', target=lightsense.lightsenseD, args=(pig,))
+            lightsenseT.daemon = True
+            lightsenseT.start()
         pendulumT = threading.Thread(name='p', target=irsense.pendulumD, args=(pig,))
         pendulumT.daemon = True
         pendulumT.start()

@@ -8,7 +8,7 @@ import config as cfg
 from commander import Commander,Command
 from defs import Watchdog
 import globs
-from globs import dbq, uiq
+from globs import dbq, uiq, mqq
 
 timeoutrpt = 0
 
@@ -53,19 +53,29 @@ def pendulumArrive(g, L, t):
         elif abs(cfg.p_offset-skew) > cfg.p_tolerance1:        # Pendulum period is outside "warn" tolerance
             loglevel = 'WARN'
         globs.realtime = datetime.now()
+        hz = cfg.p_period/delta                                 # Compute pendulum frequency (Hz)
+        drift = 86400*(1-1/hz)                                  # Compute drift (s/day)
         if isinstance(globs.newclocktime, datetime):           # clocktime was just run
             globs.clocktime += globs.realtime-globs.newclocktime # add only a partial beat
             uiq.put(('Clock time set to {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
             globs.newclocktime = None
         else:
             globs.clocktime += timedelta(microseconds=cfg.p_period)    # add one pendlum period to the clock time
-        hz = cfg.p_period/delta                                 # Compute pendulum frequency (Hz)
-        drift = 86400*(1-1/hz)                                  # Comput drift (s/day)
-        avgdrift(drift)                                         # Build the drift averages
+            # Build drift averages only when manual time *hasn't* been set (otherwise we get a ridiculous average)
+            avgdrift(drift)                                     
         beatstats = "{:+} uS / {:.4f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 3600*hz, drift)
         message += " ({})".format(beatstats)
         globs.beatbanner = "[ {} ]".format(beatstats)
         if cfg.db_engine: dbq.put((1, delta, hz, skew))           # store the database entry
+        if cfg.mqtt_engine:
+            if cfg.mqtt_p_arrive:
+                mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
+            if cfg.mqtt_telemetry: globs.telemetry.append(skew)
+            mqq.put(('clocktime',{
+                'realtime' : globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut], 
+                'clocktime' : globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut],
+                'delta' : '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())[:-cfg.ui_btcut]
+            }))
     else:
         watchdog = Watchdog(cfg.p_timeout, pendulumTimeout)    # Start the watchdog
         globs.beatbanner = "[ Waiting for second beat ]"
@@ -76,11 +86,12 @@ def pendulumArrive(g, L, t):
 
 def avgdrift(drift):
     '''compute 1 minute, 1 hour, 24 hour drift'''
-    if len(globs.driftavg) == 864e8/cfg.p_period: globs.driftavg.pop(0)
+    if len(globs.driftavg) >= 864e8/cfg.p_period:
+        globs.driftavg.pop(0)
     globs.driftavg.append(drift)
     drift1 = mean(globs.driftavg[int(-6e7/cfg.p_period):])       # 1 minute average drift (s/day)
     drift60 = mean(globs.driftavg[int(-36e8/cfg.p_period):])     # 1 hour average drift
-    drift1440 = mean(globs.driftavg)                        # 1 day average drift
+    drift1440 = mean(globs.driftavg[int(-864e8/cfg.p_period):])  # 1 day average drift
     globs.driftbanner = "Drift Average: {:+.1f}, {:+.1f}, {:+.1f} s/day".format(drift1, drift60, drift1440)
 
 def pendulumDepart(g, L, t):
@@ -100,6 +111,8 @@ def pendulumDepart(g, L, t):
     prevDep = t
     if cfg.ui_showdepart: uiq.put((message, 'INFO'))
     if cfg.db_engine: dbq.put((0, delta, hz, skew))
+    if cfg.mqtt_engine and cfg.mqtt_p_depart:
+        mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
 
 def pendulumD(pig):
     '''pendulum monitoring thread

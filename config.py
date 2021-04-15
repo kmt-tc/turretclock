@@ -19,7 +19,7 @@ p_timeoutcmd = 'timeout.sh'     # Command to execute when p_timeoutrpt timeouts 
 
 ##### UI settings #####
 
-ui_banner = ' -= Tehdassaari HQ Turret Clock Command =- '     # Banner for title bar
+ui_banner = ' -= HQ Turret Clock Command =- '     # Banner for title bar
 ui_showarrive = True            # Show pendulum arrivals?  (def: True)
 ui_showdepart = False           # Show pendulum departures?  (def: False)
 ui_ts = True                    # Timestamp UI output?  (def: True)
@@ -29,15 +29,14 @@ ui_btfmt = "%H:%M:%S.%f"        # Banner time format (strftime)  (def: "%H:%M:%S
 ui_btcut = 3                    # Trim this many characters off the banner times (def: 3)
 ui_timeupdate = 1               # UI time display update frequency (def: 1)
 ui_debug = 3                    # Debug output level (def: 0)
-#ui_debug_db = False             # Database thread debug on/off
-#ui_debug_env = True             # Environmental thread debug on/off
 ui_debuglevel = {               # Debug levels for individual modules
         'db' : 1,               # Database module
-        'env' : 3,              # Environmental monitoring module
+        'env' : 1,              # Environmental monitoring module
         'p' : 1,                # Pendulum sensor module
+        'mqtt' : 1,             # MQTT module
+        'lightsense' : 3,       # Light sensor module
 }
-
-ui_colors = {
+ui_colors = {                   # UI colours
         'DEBUG' : 'blue',       # Color for debug output (def: blue)
         'INFO' : 'green',       # Color for info output (def: normal)
         'WARN' : 'yellow',      # Color for warning output (def: yellow)
@@ -49,8 +48,9 @@ ui_colors = {
 ##### Database settings #####
 
 db_engine = True                # Store beat data in database?
-db_file = "turretclock.sqlite3" # Database filename (created if not present) (def: "/tmp/turretclock.sqlite3")
-
+db_file = "/run/turretclock/turretclock.sqlite3" # Database filename (created if not present) (def: "/tmp/turretclock.sqlite3")
+db_stats_interval = 5           # snmpstats.py reports statistics for this many mionutes (def: 5)
+db_dump_interval = 10080        # dbclean.py drops data older than this many minutes (def: 10080 (1 week))
 
 
 ##### Environmental monitor settings #####
@@ -64,10 +64,30 @@ env_maxtemp = 50                # Maximum temperatrure permitted (c) (def: 50)
 env_mintemp = -40               # Minimum temperature permitted (c) (def: -40)
 env_maxhum = 90                 # Maximum relative humidity permitted (%) (def: 90)
 env_minhum = 30                 # Minimum relative humidity permitted (%) (def: 30)
+env_humskew = 10                # Maximum allowed humidity change between readings (def: 10)
+env_tempskew = 10               # Maximum allowed temperature change between readings (def: 10)
 
 
+##### MQTT settings #####
 
-##### Stats script settings #####
+mqtt_engine = True              # Publish to an MQTT broker?
+mqtt_broker = 'localhost'       # Hostname or IP address of MQTT broker to connect to (def: localhost)
+mqtt_port = 1883                # MQTT port number (def: 1883)
+mqtt_keepalive = 60             # MQTT keepalive interval (def: 60)
+mqtt_topicbase = 'turretclock'  # MQTT topic base (def: turretclock)
+mqtt_p_arrive = True            # Report pendulum arrivals? (def: True)
+mqtt_p_depart = False           # Report pendulum departures? (def: False)
+mqtt_telemetry = True           # Report periodic telemetry (def: True)
+mqtt_telemetry_interval = 40    # Telemetry interval in seconds (def: 60)
 
-stats_interval = 5              # Interval about which stats script should report (min) (def: 5)
+
+##### Light sensor settings #####
+
+light_engine = False             # Gather light sensor readings?
+light_gpio_pin = 17             # GPIO pin for light sensor reads
+light_keepreadings = 10         # Number of light sensor readings to store
+light_read_interval = 5             # Interval between light sensor readings
+light_store_interval = 60           # interval between writing light level average to data file
+light_normalise = 70000             # normailise light level readings to this value
+light_filename = '/run/turretclock/lightlevels' # File in which to store light level readings
 
