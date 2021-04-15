@@ -121,7 +121,7 @@ def sqlaverages(drift):
     if len(rows2) > 0:
         rows.append(sum(rows2)/len(rows2))
     avg1w = (sum(rows)+avg1d)/(len(rows)+1)
-    uiq.put('Computed averages {} {} {}'.format(avg1h, avg1d, avg1w))
+    debug('Computed averages {} {} {}'.format(avg1h, avg1d, avg1w),2)
     db2x.close()
     return (avg1h, avg1d, avg1w)
 

@@ -246,7 +246,8 @@ def switchdebug(mname, mcode, mode=None):
 def debug(msg, level=1):
     '''debugging output, level = debug level (default 1)'''
     try:
-        if cfg.ui_debuglevel[threading.current_thread().name] >= level: uiq.put((msg, 'DEBUG'))
+        if cfg.ui_debuglevel[threading.current_thread().name] >= level:
+            uiq.put((msg, 'DEBUG'))
     except KeyError:                                        # This is necessary for when environment.py is called directly
         pass
 
