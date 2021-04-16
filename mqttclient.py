@@ -66,7 +66,7 @@ def sqlaverages(drift):
     # don't separate them into individual average pools like they should
     # Check to see if the avg table has anything older than 2 hours, and if so, consolidate
     # the 1-2 hour period into the hourly table.
-    sql = "SELECT COUNT(avg) FROM avg WHERE timestamp < Datetime('now', '-2 hour', 'localtime');"
+    sql = "SELECT COUNT(avg) FROM avg WHERE timestamp < Datetime('now', '-2 hours', 'localtime');"
     cur.execute(sql)
     count = cur.fetchone()
     if count > 0:       # The oldest entries are more than two hours old, so move everything >1 hour old
@@ -81,37 +81,44 @@ def sqlaverages(drift):
     sql = "INSERT INTO avg(avg) VALUES ({})".format(drift)
     cur.execute(sql)
     db2x.commit()
-    # Move hourly averages into daily if they are more than 48 hours old
-    sql = "SELECT COUNT(avg) FROM avg1H WHERE timestamp < Datetime('now', '-2 day', 'localtime');"
+    # Move hourly averages into daily if they are more than 48 hours old (sql query is for -47 hours
+    # because the above consolidation results in timestamps one hour later than the data)
+    sql = "SELECT COUNT(avg) FROM avg1H WHERE timestamp < Datetime('now', '-47 hours', 'localtime');"
     cur.execute(sql)
     count = cur.fetchone()
     if count > 0:       # The oldest entries are more than two days old, so consolidate into avg1D
-        sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp < Datetime('now', '-1 day', 'localtime');"
+        sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
         sql = "INSERT INTO avg1D(avg) VALUES ({})".format(row)
         cur.execute(sql)
-        sql = "DELETE FROM avg1H WHERE timestamp < Datetime('now', '-1 day', 'localtime');"
+        sql = "DELETE FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime');"
         cur.execute(sql)
     # Drop data from daily if it's more than one week old
-    sql = "DELETE FROM avg1D WHERE timestamp < Datetime('now', '-1 week', 'localtime');"
+    sql = "DELETE FROM avg1D WHERE timestamp < Datetime('now', '-6 days', 'localtime');"
     cur.execute(sql)
     db2x.commit()
     # Compute the 1 hour average
-    sql = "SELECT AVG(avg) FROM avg WHERE timestamp >= Datetime('now', '-1 hour', 'localtime');"
+    sql = "SELECT AVG(avg) FROM avg WHERE timestamp >= Datetime('now', '-1 hours', 'localtime');"
     cur.execute(sql)
     avg1h = cur.fetchone()
     # Compute the 1 day average
-    sql = "SELECT avg FROM avg1H WHERE timestamp >= Datetime('now', '-1 day', 'localtime');"
+    sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp >= Datetime('now', '-23 hours', 'localtime');"
     cur.execute(sql)
-    rows = cur.fetchall()
-    sql = "SELECT avg FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime');"
+    avg1d = cur.fetchone()
+    # Need to know how old the oldest entry in avg is, to weight properly
+    sql = "SELECT (strftime('%s', 'now', 'localtime') - strftime('%s', timestamp)) FROM avg ORDER BY timestamp LIMIT 1;"
     cur.execute(sql)
-    rows2 = cur.fetchall()
-    if len(rows2) > 0:
-        rows.append(sum(rows2)/len(rows2))
-    avg1d = (sum(rows)+avg1h)/(len(rows)+1)
+    oldest = cur.fetchone()
+    sql = "SELECT AVG(avg) FROM avg;"
+    cur.execute(sql)
+    avg1d2 = cur.fetchone()
+    avg1d = (23*avg1d + (oldest/3600)*avg1d2)/(23+(oldest/3600))
+#    if len(rows2) > 0:
+#        rows.append(sum(rows2)/len(rows2))
+#    avg1d = (sum(rows)+avg1h)/(len(rows)+1)
     # Compute the 1 week average
+    # FIXME apply the same logic to weekly if this works
     sql = "SELECT avg FROM avg1D"
     cur.execute(sql)
     rows = cur.fetchall()
