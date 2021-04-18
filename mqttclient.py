@@ -21,7 +21,7 @@ def mqttTelemetry():
     stelemetry = sorted(globs.telemetry)
     globs.telemetry = []
     try:
-        avgskew = int(sum(stelemetry)/len(stelemetry))
+        avgskew = sum(stelemetry)/len(stelemetry)
     except ZeroDivisionError:                               # This will happen when the clock isn't running
         return
     drift = -avgskew*86400/cfg.p_period
@@ -70,7 +70,7 @@ def sqlaverages(drift):
     cur.execute(sql)
     count = cur.fetchone()
     if count > 0:       # The oldest entries are more than two hours old, so move everything >1 hour old
-        sql = "SELECT AVG(avg) FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime');"
+        sql = "SELECT AVG(avg) FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime') AND timestamp >= Datetime('now', '-121 minutes', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
         sql = "INSERT INTO avg1H(avg) VALUES ({})".format(row)
@@ -87,7 +87,7 @@ def sqlaverages(drift):
     cur.execute(sql)
     count = cur.fetchone()
     if count > 0:       # The oldest entries are more than two days old, so consolidate into avg1D
-        sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime');"
+        sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime') AND timestamp >= Datetime('now', '-48 hours', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
         sql = "INSERT INTO avg1D(avg) VALUES ({})".format(row)
