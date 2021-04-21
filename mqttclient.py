@@ -62,14 +62,11 @@ def sqlaverages(drift):
     db2x = dbopen()
     db2x.row_factory = lambda cursor, row: row[0]        # Produce a list, not a list of tuples
     cur = db2x.cursor()
-    # FIXME - these move routines just assume all the old stuff is in the prior period, and
-    # don't separate them into individual average pools like they should
-    # Check to see if the avg table has anything older than 2 hours, and if so, consolidate
-    # the 1-2 hour period into the hourly table.
+    # Look to see if the current pool has gotten two hours old
     sql = "SELECT COUNT(avg) FROM avg WHERE timestamp < Datetime('now', '-2 hours', 'localtime');"
     cur.execute(sql)
     count = cur.fetchone()
-    if count > 0:       # The oldest entries are more than two hours old, so move everything >1 hour old
+    if count > 0:       # The oldest entries are more than two hours old, so consolidate everything >1 hour old
         sql = "SELECT AVG(avg) FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime') AND timestamp >= Datetime('now', '-121 minutes', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
@@ -180,8 +177,8 @@ def mqttD():
     debug('MQTT thread initialising')
     global mqclient, watchdog, db2x
     mqclient = mqtt.Client()
-#    mqclient.connect(cfg.mqtt_broker, cfg.mqtt_port, cfg.mqtt_keepalive)
-    mqclient.connect('localhost', 1883, 60)     # FIXME this doesn't work with the config file?
+    mqclient.connect(cfg.mqtt_broker, cfg.mqtt_port, cfg.mqtt_keepalive)
+    mqclient.loop_start()
     if cfg.mqtt_telemetry:
         # Initialise the database
         dbinit()
@@ -189,7 +186,6 @@ def mqttD():
         watchdog = Watchdog(cfg.mqtt_telemetry_interval, mqttTelemetry)
     while True:
         item = mqq.get()
-#        if (item[0] == 'beat'):
         payload = json.dumps(item[1])
         mqclient.publish('{}/{}'.format(cfg.mqtt_topicbase, item[0]), payload=payload, qos=0, retain=False)
         debug('MQTT publish: {}/{}: {}'.format(cfg.mqtt_topicbase, item[0], item[1]), 3)
