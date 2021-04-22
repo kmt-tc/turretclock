@@ -3,6 +3,7 @@ from queue import Queue
 import os
 from datetime import timedelta, datetime
 from statistics import mean
+import subprocess
 
 import config as cfg
 from commander import Commander,Command
@@ -25,14 +26,17 @@ def pendulumTimeout():
         globs.beatbanner = "[ Waiting for first beat ]"
         prevArr = 0
         prevDep = 0
-#        pa.cancel()                         # Kill the pendulum arrival monitor thread
-#        pd.cancel()                         # Kill the pendulum departure monitor
         watchdog.stop()                   # Kill the watchdog
         try: cfg.p_timeoutcmd
         except AttributeError: pass
         else:
             uiq.put(('Executing timeout command \'{}\''.format(cfg.p_timeoutcmd),'DEBUG'))
-            os.system(cfg.p_timeoutcmd)    # Run a specified command on timeout
+            try:
+                tocmdout = subprocess.check_output([cfg.p_timeoutcmd])
+                if len(tocmdout) > 0:
+                    uiq.put((tocmdout.decode('ascii'),'DEBUG'))
+            except subprocess.CalledProcessError as err:
+                uiq.put(('ERROR: {}'.format(err), 'ERR'))
 
 def pendulumArrive(g, L, t):
     '''pendulumArrive(gpio, level, tick) - pendulum has arrived at IR sensor gate
