@@ -164,7 +164,10 @@ Usage: clocktime            Display the current physical clock time
             (+|-)s          Set the clock time to the current time plus or minus s seconds
 '''
         if len(args) == 0:
-            uiq.put(('Clock time is {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
+            if cfg.ui_btcut > 0:
+                uiq.put(('Clock time is {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
+            else:
+                uiq.put(('Clock time is {}'.format(globs.clocktime.strftime(cfg.ui_btfmt))))
             return
         elif args[0].lower() == 'now':
             globs.clocktime = datetime.now()
@@ -274,18 +277,27 @@ def outputD(c):
 #                elif cfg.ui_debug < item[2]:                        # Debug level is too low to show this item
 #                    continue
             if cfg.ui_ts:
-                ts = datetime.now().strftime(cfg.ui_tsfmt)[:-cfg.ui_tscut] + " - "  # Format timestamp
+                if cfg.ui_tscut > 0:
+                    ts = datetime.now().strftime(cfg.ui_tsfmt)[:-cfg.ui_tscut] + " - "  # Format timestamp
+                else:
+                    ts = datetime.now().strftime(cfg.ui_tsfmt) + " - "
                 item = (ts + item[0].replace('\n', '\n' + ' '*len(ts)), item[1])    # Add timestamp and spaces to align multiline output
             c.output(item[0],cfg.ui_colors[item[1]])
 
 def updateUItime(c):
     '''update the times in the status bar
     '''
+    if cfg.ui_btcut > 0:
+        htrt = globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
+        htct = globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
+    else:
+        htrt = globs.realtime.strftime(cfg.ui_btfmt)
+        htct = globs.clocktime.strftime(cfg.ui_btfmt)
     headertext = '{0}\n\nReal Time: {1} >> {2:^+8.3f}s >> Clock Time: {3}\n{4}\n{5}\nTemperature: {6} C - Humidity {7}%\n'.format(
             cfg.ui_banner,
-            globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut],
+            htrt,
             (globs.clocktime-globs.realtime).total_seconds(),
-            globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut],
+            htct,
             globs.beatbanner,
             globs.driftbanner,
             globs.temperature,

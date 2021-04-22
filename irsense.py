@@ -57,7 +57,10 @@ def pendulumArrive(g, L, t):
         drift = 86400*(1-1/hz)                                  # Compute drift (s/day)
         if isinstance(globs.newclocktime, datetime):           # clocktime was just run
             globs.clocktime += globs.realtime-globs.newclocktime # add only a partial beat
-            uiq.put(('Clock time set to {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
+            if cfg.ui_btcut > 0:
+                uiq.put(('Clock time set to {}'.format(globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut])))
+            else:
+                uiq.put(('Clock time set to {}'.format(globs.clocktime.strftime(cfg.ui_btfmt))))
             globs.newclocktime = None
         else:
             globs.clocktime += timedelta(microseconds=cfg.p_period)    # add one pendlum period to the clock time
@@ -70,11 +73,20 @@ def pendulumArrive(g, L, t):
         if cfg.mqtt_engine:
             if cfg.mqtt_p_arrive:
                 mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
-            if cfg.mqtt_telemetry: globs.telemetry.append(skew)
+            if cfg.mqtt_telemetry:
+                globs.telemetry.append(skew)
+            if cfg.ui_btcut > 0:
+                mqrt = globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
+                mqct = globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
+                mqdt = '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())[:-cfg.ui_btcut]
+            else:
+                mqrt = globs.realtime.strftime(cfg.ui_btfmt)
+                mqct = globs.clocktime.strftime(cfg.ui_btfmt)
+                mqdt = '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())
             mqq.put(('clocktime',{
-                'realtime' : globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut], 
-                'clocktime' : globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut],
-                'delta' : '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())[:-cfg.ui_btcut]
+                'realtime' : mqrt,
+                'clocktime' : mqct,
+                'delta' : mqdt
             }))
     else:
         watchdog = Watchdog(cfg.p_timeout, pendulumTimeout)    # Start the watchdog
