@@ -5,6 +5,8 @@ from datetime import datetime
 import threading
 #from queue import Queue
 import pigpio
+from os.path import exists
+import os
 
 import config as cfg
 import irsense
@@ -75,6 +77,19 @@ def checkconfig():
     except:
         error('ERROR: p_timeout must be a positive number')
         configerrs += 1
+
+    if not isinstance(cfg.p_timeoutcmd, str):
+        cfg.p_timeoutcmd = None
+    else:
+        if cfg.p_timeoutcmd[0] != '/':
+            cfg.p_timeoutcmd = os.getcwd() + '/' + cfg.p_timeoutcmd
+        if not exists(cfg.p_timeoutcmd):
+            error('ERROR: Timeout command {} does not exist'.format(cfg.p_timeoutcmd))
+            configerrs += 1
+        else:
+            if not os.access(cfg.p_timeoutcmd, os.X_OK):
+                error('ERROR: Timeout command {} is not executable'.format(cfg.p_timeoutcmd))
+                configerrs += 1
 
     try:
         if not isinstance(cfg.p_timeoutrpt, int) or cfg.p_timeoutrpt < 0:
