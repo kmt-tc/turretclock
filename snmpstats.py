@@ -18,6 +18,7 @@
 #   - Average daily drift in s/day
 #   - 95th percentile max
 #   - 95th percentile min
+#   - Average clock error in seconds
 
 import sqlite3
 from dbstore import dbopen, dbclose
@@ -25,24 +26,28 @@ from dbstore import dbopen, dbclose
 import config as cfg
 
 dbx = dbopen()      # Open the database
-dbx.row_factory = lambda cursor, row: row[0]        # Produce a list, not a list of tuples
+# Now I want tuples, because of adding in error data
+# dbx.row_factory = lambda cursor, row: row[0]        # Produce a list, not a list of tuples
 cur = dbx.cursor()
-sql = "SELECT skew FROM beats WHERE beattype=1 AND timestamp >= Datetime('now', '-{} minutes', 'localtime') ORDER BY skew;".format(cfg.db_stats_interval)
+sql = "SELECT skew, error FROM beats WHERE beattype=1 AND timestamp >= Datetime('now', '-{} minutes', 'localtime') ORDER BY skew;".format(cfg.db_stats_interval)
 cur.execute(sql)
 rows = cur.fetchall()
+skews = [x[0] for x in rows]
+errs = [x[1] for x in rows]
 
-avgskew = int(sum(rows)/len(rows))
+avgskew = int(sum(skews)/len(skews))
 print(avgskew)                                      # Average skew
-print(max(rows))                                    # Maximum skew
-print(min(rows))                                    # Minimum skew
-print(round(100*len([element for element in rows if element < cfg.p_offset-cfg.p_tolerance2])/len(rows),1))       # Red- percent
-print(round(100*len([element for element in rows if cfg.p_offset-cfg.p_tolerance2 <= element < cfg.p_offset-cfg.p_tolerance1])/len(rows),1))           # Yellow- percent
-print(round(100*len([element for element in rows if abs(cfg.p_offset-element) <= cfg.p_tolerance1])/len(rows),1))        # Green percent
-print(round(100*len([element for element in rows if cfg.p_offset+cfg.p_tolerance1 < element <= cfg.p_offset+cfg.p_tolerance2])/len(rows),1))            # Yellow+ percent
-print(round(100*len([element for element in rows if element > cfg.p_offset+cfg.p_tolerance2])/len(rows),1))       # Red+ percent
+print(max(skews))                                    # Maximum skew
+print(min(skews))                                    # Minimum skew
+print(round(100*len([element for element in skews if element < cfg.p_offset-cfg.p_tolerance2])/len(skews),1))       # Red- percent
+print(round(100*len([element for element in skews if cfg.p_offset-cfg.p_tolerance2 <= element < cfg.p_offset-cfg.p_tolerance1])/len(skews),1))           # Yellow- percent
+print(round(100*len([element for element in skews if abs(cfg.p_offset-element) <= cfg.p_tolerance1])/len(skews),1))        # Green percent
+print(round(100*len([element for element in skews if cfg.p_offset+cfg.p_tolerance1 < element <= cfg.p_offset+cfg.p_tolerance2])/len(skews),1))            # Yellow+ percent
+print(round(100*len([element for element in skews if element > cfg.p_offset+cfg.p_tolerance2])/len(skews),1))       # Red+ percent
 print(round(-avgskew*86400/cfg.p_period,1))                 # Average daily skew over the past 5 minutes
-print(rows[int(len(rows)*0.95)])                    # 95th percentile max
-print(rows[int(len(rows)*0.05)])                    # 95th percentile min
+print(skews[int(len(skews)*0.95)])                    # 95th percentile max
+print(skews[int(len(skews)*0.05)])                    # 95th percentile min
+print(sum(errs)/len(errs))                          # Average clock error
 
 dbclose()
 

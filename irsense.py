@@ -69,7 +69,8 @@ def pendulumArrive(g, L, t):
         beatstats = "{:+} uS / {:.4f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 3600*hz, drift)
         message += " ({})".format(beatstats)
         globs.beatbanner = "[ {} ]".format(beatstats)
-        if cfg.db_engine: dbq.put((1, delta, hz, skew))           # store the database entry
+        clockerr = (globs.clocktime-globs.realtime).total_seconds()
+        if cfg.db_engine: dbq.put((1, delta, hz, skew, clockerr))           # store the database entry
         if cfg.mqtt_engine:
             if cfg.mqtt_p_arrive:
                 mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
@@ -78,11 +79,11 @@ def pendulumArrive(g, L, t):
             if cfg.ui_btcut > 0:
                 mqrt = globs.realtime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
                 mqct = globs.clocktime.strftime(cfg.ui_btfmt)[:-cfg.ui_btcut]
-                mqdt = '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())[:-cfg.ui_btcut]
+                mqdt = '{0:.6f}'.format(clockerr)[:-cfg.ui_btcut]
             else:
                 mqrt = globs.realtime.strftime(cfg.ui_btfmt)
                 mqct = globs.clocktime.strftime(cfg.ui_btfmt)
-                mqdt = '{0:.6f}'.format((globs.clocktime-globs.realtime).total_seconds())
+                mqdt = '{0:.6f}'.format(clockerr)
             mqq.put(('clocktime',{
                 'realtime' : mqrt,
                 'clocktime' : mqct,
@@ -122,7 +123,8 @@ def pendulumDepart(g, L, t):
     message = "pendulum departure at " + str(t)
     prevDep = t
     if cfg.ui_showdepart: uiq.put((message, 'INFO'))
-    if cfg.db_engine: dbq.put((0, delta, hz, skew))
+    # FIXME Storing 0 for clock error on departures for now, should probably do something else
+    if cfg.db_engine: dbq.put((0, delta, hz, skew, 0))
     if cfg.mqtt_engine and cfg.mqtt_p_depart:
         mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
 

@@ -22,7 +22,8 @@ sqltable = '''
         hz              REAL,
         skew            INTEGER,
         temperature     REAL,
-        humidity        REAL
+        humidity        REAL,
+        error           REAL
 '''
 avgsqltable = '''
         timestamp       TEXT DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW', 'localtime')),

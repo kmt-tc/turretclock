@@ -36,7 +36,7 @@ def dbclose():
     global dbx
     dbx.close()
 
-def dbstorebeat(beattype, delta, hz, skew):
+def dbstorebeat(beattype, delta, hz, skew, err):
     '''database storage routine:
         beattype = 1/arrive, 0/depart
         delta = delta since last beat, in uS
@@ -44,7 +44,7 @@ def dbstorebeat(beattype, delta, hz, skew):
         skew = skew from desired beat frequency
     '''
     global dbx, temperature, humidity
-    sql = "INSERT INTO beats(beattype, delta, hz, skew, temperature, humidity) VALUES ({}, {}, {}, {}, {}, {})".format(beattype, delta, hz, skew, globs.temperature, globs.humidity)
+    sql = "INSERT INTO beats(beattype, delta, hz, skew, temperature, humidity, error) VALUES ({}, {}, {}, {}, {}, {}, {})".format(beattype, delta, hz, skew, globs.temperature, globs.humidity, err)
     try: dbx
     except NameError: dbopen
     else:
