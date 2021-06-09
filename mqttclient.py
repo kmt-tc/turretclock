@@ -98,13 +98,24 @@ def sqlaverages(drift):
     cur.execute(sql)
     db2x.commit()
     # Compute the 1 hour average
-    sql = "SELECT AVG(avg) FROM avg WHERE timestamp >= Datetime('now', '-1 hours', 'localtime');"
+    sql = "SELECT COUNT(avg) FROM avg WHERE timestamp >= Datetime('now', '-1 hours', 'localtime');"
     cur.execute(sql)
-    avg1h = cur.fetchone()
+    count = cur.fetchone()
+    if count != None:
+        sql = "SELECT AVG(avg) FROM avg WHERE timestamp >= Datetime('now', '-1 hours', 'localtime');"
+        cur.execute(sql)
+        avg1h = cur.fetchone()
+    else:
+        avg1h = 0
     # Compute the 1 day average
-    sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp >= Datetime('now', '-23 hours', 'localtime');"
-    cur.execute(sql)
-    avg1d = cur.fetchone()
+    sql = "SELECT COUNT(avg) FROM avg1H WHERE timestamp >= Datetime('now', '-23 hours', 'localtime');"
+    count = cur.fetchone()
+    if count != None:
+        sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp >= Datetime('now', '-23 hours', 'localtime');"
+        cur.execute(sql)
+        avg1d = cur.fetchone()
+    else:
+        avg1d = 0
     # Need to know how old the oldest entry in avg is, to weight properly
     sql = "SELECT (strftime('%s', 'now', 'localtime') - strftime('%s', timestamp)) FROM avg ORDER BY timestamp LIMIT 1;"
     cur.execute(sql)
