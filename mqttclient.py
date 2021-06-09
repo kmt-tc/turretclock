@@ -70,8 +70,9 @@ def sqlaverages(drift):
         sql = "SELECT AVG(avg) FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime') AND timestamp >= Datetime('now', '-121 minutes', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
-        sql = "INSERT INTO avg1H(avg) VALUES ({})".format(row)
-        cur.execute(sql)
+        if (row != None):       # This can come up None if there's old data from a crash
+            sql = "INSERT INTO avg1H(avg) VALUES ({})".format(row)
+            cur.execute(sql)
         sql = "DELETE FROM avg WHERE timestamp < Datetime('now', '-1 hour', 'localtime');"
         cur.execute(sql)
     # Store the current drift
@@ -87,8 +88,9 @@ def sqlaverages(drift):
         sql = "SELECT AVG(avg) FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime') AND timestamp >= Datetime('now', '-48 hours', 'localtime');"
         cur.execute(sql)
         row = cur.fetchone()
-        sql = "INSERT INTO avg1D(avg) VALUES ({})".format(row)
-        cur.execute(sql)
+        if (row != None):
+            sql = "INSERT INTO avg1D(avg) VALUES ({})".format(row)
+            cur.execute(sql)
         sql = "DELETE FROM avg1H WHERE timestamp < Datetime('now', '-23 hours', 'localtime');"
         cur.execute(sql)
     # Drop data from daily if it's more than one week old
