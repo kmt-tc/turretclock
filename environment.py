@@ -27,12 +27,18 @@ def sicrc(data):
 
 def temphumid(pig):
     '''returns temperature and humidity (pig = pigpiod handle)'''
-    global prevtemp, prevhum
-#    debug('Entering temphumid(pig)', 3)
     temperature = 999
     humidity = 999
     tattempts = 0
     hattempts = 0
+
+    # Set previous variables if unset
+    if not 'prevtemp' in globals():
+        global prevtemp
+        prevtemp = 999
+    if not 'prevhum' in globals():
+        global prevhum
+        prevhum = 999
 
     # Get I2C bus
     bus = pig.i2c_open(cfg.env_i2cbus, 0x40)
@@ -107,17 +113,12 @@ def temphumid(pig):
 def envD(pig):
     '''environmental data thread (pig = pigpiod handle)'''
     debug('Environmental data thread initialising')
-    global prevtemp, prevhum
-    prevtemp = 999
-    prevhum = 999
 
     if cfg.env_frequency-3*cfg.env_delay < 0:
         uiq.put(('ERROR: env_frequency too low (must be at least {})'.format(3*cfg.env_delay), 'ERR'))
         return
     while True:
-#        debug('Calling temphumid(pig)', 3)
         globs.temperature, globs.humidity = temphumid(pig)
-#        debug('Returned from temphumid(pig)', 3)
         debug('Read temperature {} and humidity {}'.format(globs.temperature, globs.humidity), 2)
         time.sleep(cfg.env_frequency-3*cfg.env_delay)
 
