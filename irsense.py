@@ -70,7 +70,7 @@ def pendulumArrive(g, L, t):
             globs.clocktime += timedelta(microseconds=cfg.p_period)    # add one pendlum period to the clock time
             # Build drift averages only when manual time *hasn't* been set (otherwise we get a ridiculous average)
             avgdrift(drift)                                     
-        beatstats = "{:+} uS / {:.4f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 7200*hz, drift)
+        beatstats = "{:+} uS / {:.6f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 7200*hz, drift)
         message += " ({})".format(beatstats)
         globs.beatbanner = "[ {} ]".format(beatstats)
         clockerr = (globs.clocktime-globs.realtime).total_seconds()
