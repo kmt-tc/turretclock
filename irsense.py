@@ -57,8 +57,8 @@ def pendulumArrive(g, L, t):
         elif abs(cfg.p_offset-skew) > cfg.p_tolerance1:        # Pendulum period is outside "warn" tolerance
             loglevel = 'WARN'
         globs.realtime = datetime.now()
-        hz = cfg.p_period/delta                                 # Compute pendulum frequency (Hz)
-        drift = 86400*(1-1/hz)                                  # Compute drift (s/day)
+        hz = 1e6/delta                                         # Compute pendulum frequency (Hz)
+        drift = (-864e2/cfg.p_period)*skew                      # Compute drift (s/day)
         if isinstance(globs.newclocktime, datetime):           # clocktime was just run
             globs.clocktime += globs.realtime-globs.newclocktime # add only a partial beat
             if cfg.ui_btcut > 0:
@@ -70,7 +70,7 @@ def pendulumArrive(g, L, t):
             globs.clocktime += timedelta(microseconds=cfg.p_period)    # add one pendlum period to the clock time
             # Build drift averages only when manual time *hasn't* been set (otherwise we get a ridiculous average)
             avgdrift(drift)                                     
-        beatstats = "{:+} uS / {:.4f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 3600*hz, drift)
+        beatstats = "{:+} uS / {:.4f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 7200*hz, drift)
         message += " ({})".format(beatstats)
         globs.beatbanner = "[ {} ]".format(beatstats)
         clockerr = (globs.clocktime-globs.realtime).total_seconds()
