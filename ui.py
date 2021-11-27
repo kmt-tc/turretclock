@@ -293,7 +293,7 @@ def updateUItime(c):
     else:
         htrt = globs.realtime.strftime(cfg.ui_btfmt)
         htct = globs.clocktime.strftime(cfg.ui_btfmt)
-    headertext = '{0}\n\nReal Time: {1} >> {2:^+8.3f}s >> Clock Time: {3}\n{4}\n{5}\nTemperature: {6} C - Humidity {7}%\n'.format(
+    headertext = '{0}\n\nReal Time: {1} >> {2:^+8.3f}s >> Clock Time: {3}\n{4}\n{5}\nTemperature {6} C / Humidity {7}% / Osc drift {8} ppm\n'.format(
             cfg.ui_banner,
             htrt,
             (globs.clocktime-globs.realtime).total_seconds(),
@@ -301,7 +301,8 @@ def updateUItime(c):
             globs.beatbanner,
             globs.driftbanner,
             globs.temperature,
-            globs.humidity
+            globs.humidity,
+            globs.ntpdrift
     )
     c.header=urwid.Text(headertext, align='center')
     c.header=urwid.AttrWrap(c.header, 'reversed')
