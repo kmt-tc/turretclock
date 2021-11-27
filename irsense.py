@@ -134,11 +134,15 @@ def pendulumDepart(g, L, t):
     if cfg.mqtt_engine and cfg.mqtt_p_depart:
         mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': int(skew) }))  # publish beat to MQTT
 
-def readNtpDrift():
-    '''periodically reread the ntp.drift file to track oscillator drift'''
-    f = open(cfg.p_ntpdriftfile,"r")
-    globs.ntpdrift = float(f.readline())
-    threading.Timer(cfg.p_ntpdriftint, readNtpDrift).start()
+def readNtpDrift(omtime):
+    '''read the ntp.drift file to track oscillator drift, and reread on changes'''
+    nmtime = os.stat(cfg.p_ntpdriftfile).st_mtime
+    if nmtime > omtime or omtime == 0:
+        f = open(cfg.p_ntpdriftfile,"r")
+        globs.ntpdrift = float(f.readline())
+        f.close()
+        omtime = nmtime
+    threading.Timer(cfg.p_ntpdriftint, readNtpDrift, [omtime]).start()
 
 def pendulumD(pig):
     '''pendulum monitoring thread
@@ -155,6 +159,6 @@ def pendulumD(pig):
     pa = pig.callback(cfg.p_gpio_irsense_pin, pigpio.FALLING_EDGE, pendulumArrive)
 
     # Start the ntp.drift reader
-    readNtpDrift()
+    readNtpDrift(0)
 
     uiq.put(('pendulum monitor thread initialised', 'DEBUG'))

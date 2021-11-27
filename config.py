@@ -16,7 +16,8 @@ p_timeout = 2.5                 # Pendulum timeout in seconds  (def: 2.5)
 p_timeoutrpt = 5                # How many timeouts before giving up?  (def: 5)
 p_timeoutcmd = 'timeout.sh'     # Command to execute when p_timeoutrpt timeouts elapse
 p_ntpdriftfile = '/var/lib/ntp/ntp.drift'   # ntpd drift file (for oscillator drift adjustment)
-p_ntpdriftint = 60              # How often to reread the ntp drift file in seconds (def: 60)
+p_ntpdriftint = 5               # Polling interval for ntp drift file in seconds (def: 5)
+
 
 ##### UI settings #####
 
