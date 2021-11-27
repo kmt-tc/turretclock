@@ -15,7 +15,8 @@ p_min = 1900000                 # Minimum pendulum delta time in uS (to ignore o
 p_timeout = 2.5                 # Pendulum timeout in seconds  (def: 2.5)
 p_timeoutrpt = 5                # How many timeouts before giving up?  (def: 5)
 p_timeoutcmd = 'timeout.sh'     # Command to execute when p_timeoutrpt timeouts elapse
-
+p_ntpdriftfile = '/var/lib/ntp/ntp.drift'   # ntpd drift file (for oscillator drift adjustment)
+p_ntpdriftint = 60              # How often to reread the ntp drift file in seconds (def: 60)
 
 ##### UI settings #####
 
@@ -32,7 +33,7 @@ ui_debug = 3                    # Debug output level (def: 0)
 ui_debuglevel = {               # Debug levels for individual modules
         'db' : 1,               # Database module
         'env' : 1,              # Environmental monitoring module
-        'p' : 1,                # Pendulum sensor module
+        'p' : 2,                # Pendulum sensor module
         'mqtt' : 1,             # MQTT module
         'lightsense' : 3,       # Light sensor module
 }

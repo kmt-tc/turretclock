@@ -1,4 +1,5 @@
 import pigpio
+import threading
 from queue import Queue
 import os
 from datetime import timedelta, datetime
@@ -42,12 +43,14 @@ def pendulumArrive(g, L, t):
     '''pendulumArrive(gpio, level, tick) - pendulum has arrived at IR sensor gate
     '''
     global prevArr, watchdog, timeoutrpt, clocktime
+    globs.realtime = datetime.now()
     loglevel = 'INFO'                           # Default to INFO, change to WARN or ERR if necessary
     timeoutrpt = 0
     message = "beat detect"
     if prevArr:
         delta = t-prevArr
         if delta < 0: delta += 4294967295              # counter wrapped
+        delta *= (1e6+globs.ntpdrift)/1e6                      # Adjust for oscillator drift
         if delta < cfg.p_min:                                   # Absurd arrival time, ignore
             uiq.put(('Absurd arrival delta {} uS ignored.'.format(delta),'DEBUG'))
             return
@@ -56,7 +59,6 @@ def pendulumArrive(g, L, t):
             loglevel = 'ERR'
         elif abs(cfg.p_offset-skew) > cfg.p_tolerance1:        # Pendulum period is outside "warn" tolerance
             loglevel = 'WARN'
-        globs.realtime = datetime.now()
         hz = 1e6/delta                                         # Compute pendulum frequency (Hz)
         drift = (-864e2/cfg.p_period)*skew                      # Compute drift (s/day)
         if isinstance(globs.newclocktime, datetime):           # clocktime was just run
@@ -70,6 +72,7 @@ def pendulumArrive(g, L, t):
             globs.clocktime += timedelta(microseconds=cfg.p_period)    # add one pendlum period to the clock time
             # Build drift averages only when manual time *hasn't* been set (otherwise we get a ridiculous average)
             avgdrift(drift)                                     
+        clockerr = (globs.clocktime-globs.realtime).total_seconds()
         beatstats = "{:+} uS / {:.6f} Hz / {:.1f} BPH / {:+.1f} s/day".format(int(skew), hz, 7200*hz, drift)
         message += " ({})".format(beatstats)
         globs.beatbanner = "[ {} ]".format(beatstats)
@@ -77,7 +80,7 @@ def pendulumArrive(g, L, t):
         if cfg.db_engine: dbq.put((1, delta, hz, skew, clockerr))           # store the database entry
         if cfg.mqtt_engine:
             if cfg.mqtt_p_arrive:
-                mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
+                mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': int(skew) }))  # publish beat to MQTT
             if cfg.mqtt_telemetry:
                 globs.telemetry.append(skew)
             if cfg.ui_btcut > 0:
@@ -130,7 +133,13 @@ def pendulumDepart(g, L, t):
     # FIXME Storing 0 for clock error on departures for now, should probably do something else
     if cfg.db_engine: dbq.put((0, delta, hz, skew, 0))
     if cfg.mqtt_engine and cfg.mqtt_p_depart:
-        mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': skew }))  # publish beat to MQTT
+        mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': int(skew) }))  # publish beat to MQTT
+
+def readNtpDrift():
+    '''periodically reread the ntp.drift file to track oscillator drift'''
+    f = open(cfg.p_ntpdriftfile,"r")
+    globs.ntpdrift = float(f.readline())
+    threading.Timer(cfg.p_ntpdriftint, readNtpDrift).start()
 
 def pendulumD(pig):
     '''pendulum monitoring thread
@@ -145,5 +154,8 @@ def pendulumD(pig):
     pig.set_pull_up_down(cfg.p_gpio_irsense_pin, pigpio.PUD_OFF)
     pd = pig.callback(cfg.p_gpio_irsense_pin, pigpio.RISING_EDGE, pendulumDepart)
     pa = pig.callback(cfg.p_gpio_irsense_pin, pigpio.FALLING_EDGE, pendulumArrive)
+
+    # Start the ntp.drift reader
+    readNtpDrift()
 
     uiq.put(('pendulum monitor thread initialised', 'DEBUG'))

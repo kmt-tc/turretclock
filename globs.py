@@ -50,3 +50,5 @@ humidity = 0
 
 driftavg = []
 telemetry = []
+
+ntpdrift = 0
