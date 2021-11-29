@@ -9,6 +9,7 @@ from os.path import exists
 import os
 
 import config as cfg
+import globs
 import irsense
 import ui
 from ui import uiq, error
@@ -121,6 +122,16 @@ def checkconfig():
 
     return configerrs
 
+def readNtpDrift(omtime = 0):
+    '''read the ntp.drift file to track oscillator drift, and reread on changes'''
+    nmtime = os.stat(cfg.ntpdriftfile).st_mtime
+    if nmtime > omtime:
+        f = open(cfg.ntpdriftfile,"r")
+        globs.ntpdrift = float(f.readline())
+        f.close()
+        omtime = nmtime
+    threading.Timer(cfg.ntpdriftint, readNtpDrift, [omtime]).start()
+
 if __name__ == '__main__':
     pig = pigpio.pi()   # Connect to pigpiod
     c = Commander(cfg.ui_banner, cmd_cb=ui.cmds())    # Start up Commander interface
@@ -138,24 +149,31 @@ if __name__ == '__main__':
         error('ERROR: {} configuration errors found - Cannot continue'.format(configerrs))
     else:
         # Build other threads
+        # Database thread
         if cfg.db_engine:
             dbT = threading.Thread(name='db', target=dbstore.dbD)
             dbT.daemon = True
             dbT.start()
         else:
             uiq.put(('WARNING: Database storage disabled.','WARN'))
+        # Environment thread
         if cfg.env_engine:
             envT = threading.Thread(name='env', target=environment.envD, args=(pig,))
             envT.daemon = True
             envT.start()
+        # MQTT thread
         if cfg.mqtt_engine:
             mqttT = threading.Thread(name='mqtt', target=mqttclient.mqttD)
             mqttT.daemon = True
             mqttT.start()
+        # Light sensor thread
         if cfg.light_engine:
             lightsenseT = threading.Thread(name='lightsense', target=lightsense.lightsenseD, args=(pig,))
             lightsenseT.daemon = True
             lightsenseT.start()
+        # ntp.drift reader
+        readNtpDrift()
+        # Clock monitor thread
         pendulumT = threading.Thread(name='p', target=irsense.pendulumD, args=(pig,))
         pendulumT.daemon = True
         pendulumT.start()

@@ -1,5 +1,11 @@
 # configuration file for turretclock.py
 
+##### General #####
+
+ntpdriftfile = '/var/lib/ntp/ntp.drift'   # ntpd drift file (for oscillator drift adjustment)
+ntpdriftint = 5                 # Polling interval for ntp drift file in seconds (def: 5)
+
+
 ##### IR sensor settings #####
 
 # GPIO settings
@@ -15,8 +21,6 @@ p_min = 1900000                 # Minimum pendulum delta time in uS (to ignore o
 p_timeout = 2.5                 # Pendulum timeout in seconds  (def: 2.5)
 p_timeoutrpt = 5                # How many timeouts before giving up?  (def: 5)
 p_timeoutcmd = 'timeout.sh'     # Command to execute when p_timeoutrpt timeouts elapse
-p_ntpdriftfile = '/var/lib/ntp/ntp.drift'   # ntpd drift file (for oscillator drift adjustment)
-p_ntpdriftint = 5               # Polling interval for ntp drift file in seconds (def: 5)
 
 
 ##### UI settings #####

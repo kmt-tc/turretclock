@@ -1,5 +1,4 @@
 import pigpio
-import threading
 from queue import Queue
 import os
 from datetime import timedelta, datetime
@@ -134,16 +133,6 @@ def pendulumDepart(g, L, t):
     if cfg.mqtt_engine and cfg.mqtt_p_depart:
         mqq.put(('beatDepart',{ 'delta': delta, 'Hz': hz, 'skew': int(skew) }))  # publish beat to MQTT
 
-def readNtpDrift(omtime = 0):
-    '''read the ntp.drift file to track oscillator drift, and reread on changes'''
-    nmtime = os.stat(cfg.p_ntpdriftfile).st_mtime
-    if nmtime > omtime:
-        f = open(cfg.p_ntpdriftfile,"r")
-        globs.ntpdrift = float(f.readline())
-        f.close()
-        omtime = nmtime
-    threading.Timer(cfg.p_ntpdriftint, readNtpDrift, [omtime]).start()
-
 def pendulumD(pig):
     '''pendulum monitoring thread
     '''
@@ -153,12 +142,12 @@ def pendulumD(pig):
     prevArr = 0
     prevDep = 0
 
+    # Load saved state
+
+
     # Set a callback for every pendulum cross
     pig.set_pull_up_down(cfg.p_gpio_irsense_pin, pigpio.PUD_OFF)
     pd = pig.callback(cfg.p_gpio_irsense_pin, pigpio.RISING_EDGE, pendulumDepart)
     pa = pig.callback(cfg.p_gpio_irsense_pin, pigpio.FALLING_EDGE, pendulumArrive)
-
-    # Start the ntp.drift reader
-    readNtpDrift()
 
     uiq.put(('pendulum monitor thread initialised', 'DEBUG'))
