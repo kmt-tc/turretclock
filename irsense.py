@@ -110,7 +110,7 @@ def avgdrift(drift):
     globs.driftavg.append(drift)
     drift1 = mean(globs.driftavg[int(-6e7/cfg.p_period):])       # 1 minute average drift (s/day)
     drift60 = mean(globs.driftavg[int(-36e8/cfg.p_period):])     # 1 hour average drift
-    drift1440 = mean(globs.driftavg[int(-864e8/cfg.p_period):])  # 1 day average drift
+    drift1440 = mean(globs.driftavg)                             # 1 day average drift
     globs.driftbanner = "Drift Average: {:+.1f}, {:+.1f}, {:+.1f} s/day".format(drift1, drift60, drift1440)
 
 def pendulumDepart(g, L, t):
