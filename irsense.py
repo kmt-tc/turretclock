@@ -97,7 +97,8 @@ def pendulumArrive(g, L, t):
     else:
         watchdog = Watchdog(cfg.p_timeout, pendulumTimeout)    # Start the watchdog
         globs.beatbanner = "[ Waiting for second beat ]"
-        globs.clocktime = datetime.now()                      # CHANGE THIS once time assignment code exists
+        globs.clocktime = datetime.now() + timedelta(seconds=globs.driftstate)
+        globs.driftstate = 0                # To allow for pendulum restarts to be automatically "now"
     prevArr = t
     if cfg.ui_showarrive: uiq.put((message, loglevel))
     watchdog.reset()                         # reset the watchdog timer
@@ -141,9 +142,6 @@ def pendulumD(pig):
     global prevArr, prevDep, watchdog, pa, pd
     prevArr = 0
     prevDep = 0
-
-    # Load saved state
-
 
     # Set a callback for every pendulum cross
     pig.set_pull_up_down(cfg.p_gpio_irsense_pin, pigpio.PUD_OFF)

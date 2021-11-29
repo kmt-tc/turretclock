@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 #from queue import Queue
 import pigpio
 from os.path import exists
 import os
+from statistics import mean
 
 import config as cfg
 import globs
@@ -132,6 +133,45 @@ def readNtpDrift(omtime = 0):
         omtime = nmtime
     threading.Timer(cfg.ntpdriftint, readNtpDrift, [omtime]).start()
 
+def loadState():
+    '''load the saved state if it exists'''
+    try:
+        f = open(cfg.statefile,"r")
+        globs.driftstate = float(f.readline())
+        drift1m = float(f.readline())
+        drift1h = float(f.readline())
+        drift1d = float(f.readline())
+        f.close()
+        # Add elements generated from old daily average
+        adrift1d = (86400*drift1d-3540*drift1h-60*drift1m)/82800
+        for x in range(int(82800/(cfg.p_period/1e6))):
+            globs.driftavg.append(adrift1d)
+        # Add elements generated from old hourly average
+        adrift1h = (3600*drift1h-60*drift1m)/3540
+        for x in range(int(3540/(cfg.p_period/1e6))):
+            globs.driftavg.append(adrift1h)
+        # Add elements from old minute average
+        for x in range(int(60/(cfg.p_period/1e6))):
+            globs.driftavg.append(drift1m)
+    except:
+        uiq.put(('WARNING: State file not loaded','WARN'))
+
+def saveState():
+    '''periodically write the state file'''
+    if len(globs.driftavg) > 0:
+        try:
+            f = open(cfg.statefile,"w")
+            f.writelines([
+                str((globs.clocktime-globs.realtime).total_seconds()) + "\n",   # Clock error
+                str(mean(globs.driftavg[int(-6e7/cfg.p_period):])) + "\n",      # 1 minute drift
+                str(mean(globs.driftavg[int(-36e8/cfg.p_period):])) + "\n",     # 1 hour drift
+                str(mean(globs.driftavg)) + "\n"                                # 1 day drift
+            ])
+            f.close()
+        except:
+            uiq.put(('WARNING: Failed to save state file','WARN'))
+    threading.Timer(cfg.stateint, saveState).start()
+
 if __name__ == '__main__':
     pig = pigpio.pi()   # Connect to pigpiod
     c = Commander(cfg.ui_banner, cmd_cb=ui.cmds())    # Start up Commander interface
@@ -148,7 +188,10 @@ if __name__ == '__main__':
     elif configerrs:
         error('ERROR: {} configuration errors found - Cannot continue'.format(configerrs))
     else:
-        # Build other threads
+        # Load saved state, if it exists, then start the state save thread
+        loadState()
+        threading.Timer(cfg.stateint, saveState).start()
+
         # Database thread
         if cfg.db_engine:
             dbT = threading.Thread(name='db', target=dbstore.dbD)
@@ -156,23 +199,28 @@ if __name__ == '__main__':
             dbT.start()
         else:
             uiq.put(('WARNING: Database storage disabled.','WARN'))
+
         # Environment thread
         if cfg.env_engine:
             envT = threading.Thread(name='env', target=environment.envD, args=(pig,))
             envT.daemon = True
             envT.start()
+
         # MQTT thread
         if cfg.mqtt_engine:
             mqttT = threading.Thread(name='mqtt', target=mqttclient.mqttD)
             mqttT.daemon = True
             mqttT.start()
+
         # Light sensor thread
         if cfg.light_engine:
             lightsenseT = threading.Thread(name='lightsense', target=lightsense.lightsenseD, args=(pig,))
             lightsenseT.daemon = True
             lightsenseT.start()
+
         # ntp.drift reader
         readNtpDrift()
+
         # Clock monitor thread
         pendulumT = threading.Thread(name='p', target=irsense.pendulumD, args=(pig,))
         pendulumT.daemon = True

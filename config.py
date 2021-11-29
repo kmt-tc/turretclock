@@ -4,6 +4,8 @@
 
 ntpdriftfile = '/var/lib/ntp/ntp.drift'   # ntpd drift file (for oscillator drift adjustment)
 ntpdriftint = 5                 # Polling interval for ntp drift file in seconds (def: 5)
+statefile = '/run/turretclock/turretclock.state'    # State save file
+stateint = 60                   # State file save interval in seconds (def: 60)
 
 
 ##### IR sensor settings #####

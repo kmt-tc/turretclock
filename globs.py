@@ -52,3 +52,4 @@ driftavg = []
 telemetry = []
 
 ntpdrift = 0
+driftstate = 0
