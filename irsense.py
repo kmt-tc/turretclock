@@ -59,7 +59,7 @@ def pendulumArrive(g, L, t):
         elif abs(cfg.p_offset-skew) > cfg.p_tolerance1:        # Pendulum period is outside "warn" tolerance
             loglevel = 'WARN'
         hz = 1e6/delta                                         # Compute pendulum frequency (Hz)
-        drift = (-864e2/cfg.p_period)*skew                      # Compute drift (s/day)
+        drift = (-864e2/cfg.p_period)*skew                     # Compute drift (s/day)
         if isinstance(globs.newclocktime, datetime):           # clocktime was just run
             globs.clocktime += globs.realtime-globs.newclocktime # add only a partial beat
             if cfg.ui_btcut > 0:
@@ -78,7 +78,12 @@ def pendulumArrive(g, L, t):
         if cfg.db_engine: dbq.put((1, delta, hz, skew, clockerr))           # store the database entry
         if cfg.mqtt_engine:
             if cfg.mqtt_p_arrive:
-                mqq.put(('beatArrive',{ 'delta': delta, 'Hz': hz, 'skew': int(skew) }))  # publish beat to MQTT
+                mqq.put(('beatArrive',{                         # Publish beat to MQTT
+                    'delta': delta,
+                    'Hz': hz,
+                    'skew': int(skew),
+                    'drift': drift
+                }))
             if cfg.mqtt_telemetry:
                 globs.telemetry.append(skew)
             if cfg.ui_btcut > 0:
@@ -108,10 +113,16 @@ def avgdrift(drift):
     if len(globs.driftavg) >= 864e8/cfg.p_period:
         globs.driftavg.pop(0)
     globs.driftavg.append(drift)
-    drift1 = mean(globs.driftavg[int(-6e7/cfg.p_period):])       # 1 minute average drift (s/day)
-    drift60 = mean(globs.driftavg[int(-36e8/cfg.p_period):])     # 1 hour average drift
-    drift1440 = mean(globs.driftavg)                             # 1 day average drift
-    globs.driftbanner = "Drift Average: {:+.1f}, {:+.1f}, {:+.1f} s/day".format(drift1, drift60, drift1440)
+    globs.driftavgs = (
+        mean(globs.driftavg[int(-6e7/cfg.p_period):]),      # 1 minute average drift (s/day)
+        mean(globs.driftavg[int(-36e8/cfg.p_period):]),     # 1 hour average drift
+        mean(globs.driftavg)                                # 1 day average drift
+    )
+    globs.driftbanner = "Drift averages: {:+.1f}, {:+.1f}, {:+.1f} s/day".format(
+        globs.driftavgs[0],
+        globs.driftavgs[1],
+        globs.driftavgs[2]
+    )
 
 def pendulumDepart(g, L, t):
     '''pendulumDepart(gpio, level, tick) - pendulum has left IR sensor gate
