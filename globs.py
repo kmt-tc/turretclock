@@ -25,20 +25,6 @@ sqltable = '''
         humidity        REAL,
         error           REAL
 '''
-avgsqltable = '''
-        timestamp       TEXT DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW', 'localtime')),
-        avg             REAL
-'''
-
-avg1Hsqltable = '''
-        timestamp       TEXT DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW', 'localtime')),
-        avg             REAL
-'''
-
-avg1Dsqltable = '''
-        timestamp       TEXT DEFAULT (STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW', 'localtime')),
-        avg             REAL
-'''
 
 # Set up queues - FIXME make these set up only when modules are enabled
 uiq = Queue()           # UI queue
