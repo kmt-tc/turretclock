@@ -7,7 +7,6 @@ import threading
 import pigpio
 from os.path import exists
 import os
-from statistics import mean
 
 import config as cfg
 import globs
@@ -163,9 +162,9 @@ def saveState():
             f = open(cfg.statefile,"w")
             f.writelines([
                 str((globs.clocktime-globs.realtime).total_seconds()) + "\n",   # Clock error
-                str(mean(globs.driftavg[int(-6e7/cfg.p_period):])) + "\n",      # 1 minute drift
-                str(mean(globs.driftavg[int(-36e8/cfg.p_period):])) + "\n",     # 1 hour drift
-                str(mean(globs.driftavg)) + "\n"                                # 1 day drift
+                str(globs.driftavgs[0]) + "\n",                                 # 1 minute drift
+                str(globs.driftavgs[1]) + "\n",                                 # 1 hour drift
+                str(globs.driftavgs[2]) + "\n"                                  # 1 day drift
             ])
             f.close()
         except:
