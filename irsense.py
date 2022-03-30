@@ -49,11 +49,11 @@ def pendulumArrive(g, L, t):
     if prevArr:
         delta = t-prevArr
         if delta < 0: delta += 4294967295              # counter wrapped
-        if abs(delta) > p_maxskew:                             # Absurd arrival time, ignore
-            uiq.put(('Absurd arrival delta {} uS ignored.'.format(delta),'DEBUG'))
-            return
         delta *= (1e6+globs.ntpdrift)/1e6                      # Adjust for oscillator drift
         skew = delta-cfg.p_period
+        if abs(skew) > cfg.p_maxskew:                          # Absurd arrival time, ignore
+            uiq.put(('Absurd arrival delta {} uS ignored.'.format(delta),'DEBUG'))
+            return
         if abs(cfg.p_offset-skew) > cfg.p_tolerance2:          # Pendulum period is outside "bad" tolerance
             loglevel = 'ERR'
         elif abs(cfg.p_offset-skew) > cfg.p_tolerance1:        # Pendulum period is outside "warn" tolerance
@@ -131,9 +131,6 @@ def pendulumDepart(g, L, t):
     global prevArr,prevDep
     delta = t-prevDep
     if delta < 0: delta += 4294967295       # counter wrapped
-    if delta < cfg.p_min:                   # Absurd departure time, ignore
-        uiq.put(('Absurd departure delta {} uS ignored.'.format(delta),'DEBUG'))
-        return
     if prevArr == 0: return                    # Ignore departure if the first arrival has not been seen
     hz = cfg.p_period/delta
     skew = delta-cfg.p_period
