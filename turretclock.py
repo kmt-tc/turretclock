@@ -66,10 +66,10 @@ def checkconfig():
         configerrs += 1
 
     try:
-        if not isinstance(cfg.p_min, (float, int)) or not 0 < cfg.p_min < cfg.p_period:
+        if not isinstance(cfg.p_maxskew, (float, int)) or not 0 < cfg.p_maxskew < cfg.p_period:
             raise ValueError
     except:
-        error('ERROR: p_min must be a number between 0 and p_period')
+        error('ERROR: p_maxskew must be a number between 0 and p_period')
         configerrs += 1
 
     try:
