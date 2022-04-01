@@ -53,6 +53,7 @@ def pendulumArrive(g, L, t):
         skew = delta-cfg.p_period
         if abs(skew) > cfg.p_maxskew:                          # Absurd arrival time, ignore
             uiq.put(('Absurd arrival delta {} uS ignored.'.format(delta),'DEBUG'))
+            prevArr = t                                        # need this to compute next beat
             watchdog.reset()                                   # reset the watchdog timer
             return
         if abs(cfg.p_offset-skew) > cfg.p_tolerance2:          # Pendulum period is outside "bad" tolerance
